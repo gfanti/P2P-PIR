@@ -12,9 +12,9 @@ cubeDim = 3#1 #3
 newDatabase = 0
 base = 4#2 #4
 # dbFilenames = ['data/2048bytes/500files','data/2048bytes/2500files','data/2048bytes/5000files','data/2048bytes/7500files','data/2048bytes/10000files']
-dbFilenames = ['data_memory/2048bytes/500files']
+dbFilenames = ['data_memory/2048bytes/2files']
 
-trials = 5
+trials = 1
 tot_times = []
 
 
@@ -54,10 +54,8 @@ for dbIdx in range(len(dbFilenames)):
                 port.append(BASE_PORT + i)
                 cmd = ['server.py',str(cubeDim ),str(port[i]),str(newDatabase),dbFilename,str(base)]
                 children.append( subprocess.Popen( cmd, shell=True ) )
-            
             # wait for the servers to load
             time.sleep(10)
-        
         
             t1 = time.time()
             # call the client process

@@ -96,23 +96,27 @@ def distributePirQueries(numServers,cubeDim,pirQueries,BASE_PORT):
     while result_cnt < numServers:
         # read, write, error = select.select(sock_lst,[],[])
         inputready,outputready,exceptready = select.select(sock_lst,[],[]) 
-        print('length of inputready',len(inputready))
         for r in inputready:
+            print('buf size is ',buf_size)
             data = r.recv(buf_size)
-            print ('data look like dis',data[:10])
+            print('data size is ',len(data))
             if data:
                 try:
                     res = marshal.loads(data)
-                    print (len(data))
-                except:
+                except ( EOFError, ValueError, TypeError) as m:
                     print ('\n\nMAJOR ERROR ',len(data),data[len(data)-10:len(data)+4] ,'\n\n')
-                    print ('type',type(data))
+                    print ('Error message: ',m)
+                    # print ('type',type(data))
+                    # print ('The received data was ',data,len(data),'\n\n')
                     errorFlag = 1
                     return([],errorFlag)
                 rPort = int(res.pop(0)) - BASE_PORT
                 results[rPort] = res
-                
+                # print('res is ',res,rPort)
+
                 result_cnt = result_cnt + 1
+            else:
+                print('No data in client.py')
             r.close()
             sock_lst.remove(r)
             if not sock_lst:

@@ -37,7 +37,7 @@ else:
     cubeSize = int(f.readline())
     fileSize = int(f.readline())
     f.close()
-    serv = Server(db,cubeSize,base,fileSize)
+    serv = Server(db,cubeDim,base,fileSize)
 # print 'Loading db', time.time()-t
 t = time.time()
  
@@ -54,7 +54,8 @@ try:
     # print 'Bound socket ',port
 except socket.error as message:
     s.close()
-    print ('Could not open socket: ' + message.args)
+    print ('Could not open socket: ')
+    print (message)
     sys.exit(1)
 
 # try:
@@ -89,6 +90,7 @@ f.close()
 
 # return the result to the client
 print ('size result',len(result),len(marshal.dumps([port]+result)), len(marshal.loads(marshal.dumps([port]+result))))
+print('result contains endfile: ',(26 in result), port)
 client_socket.send(marshal.dumps([port]+result))
 t = time.time()
 client_socket.close()

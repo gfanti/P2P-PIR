@@ -10,7 +10,7 @@ class Server:
         if isinstance(db[0],str): 
             dbCube,cubeSize,self.fileSize = self.reshapeDb(db,cubeDim,base)
 
-            print( self.fileSize)
+            print( 'filesize is ',self.fileSize)
             self.db = [[]]*base
             for i in range(1,base):
                 self.db[i] = dbCube[i]
@@ -18,7 +18,8 @@ class Server:
         # db has already been provided, just store it
         else:	
             self.db = db
-            self.cubeSize = cubeDim
+            self.cubeDim = cubeDim
+            self.cubeSize = db.shape[0]
             self.fileSize = fileSize
         
     def getDb(self):
@@ -55,34 +56,45 @@ class Server:
         return (dbCube,cubeSize,fileSize)
         
     def submitPirQuery(self,q,base):
-        # takes as input a 3D PIR query and returns the appropriate combo of files
-
-        #Projection 1: 4d-->3d
-        x,y,z,omega = self.db[1].shape
-        proj3d = numpy.zeros((1,y,z,omega),dtype=numpy.uint8)
-        for bit_idx in range(len(q[0])):
-            if q[0][bit_idx]==0:
-                continue
-            proj3d = numpy.bitwise_xor(self.db[q[0][bit_idx]][bit_idx,:,:,:],proj3d)
-        proj3d = numpy.add.reduce(proj3d,0)
-
-
-
-        #scale everything by the GF(4) value in q
-        #Projection 2: 3d-->2d
-        proj2d = numpy.zeros((1,z,omega),dtype=numpy.uint8)
-        for bit_idx in range(len(q[1])):
-            if q[1][bit_idx]==0:
-                continue
-            proj2d = numpy.bitwise_xor(utilities.scaleArrayGF(proj3d[bit_idx,:,:],q[1][bit_idx],base),proj2d)
-        proj2d = numpy.add.reduce(proj2d,0)
+        if self.cubeDim > 3:
+            return 0
+        if self.cubeDim == 3:
+            # takes as input a 3D PIR query and returns the appropriate combo of files
+            #Projection 1: 4d-->3d
+            x,y,z,omega = self.db[1].shape
+            proj3d = numpy.zeros((1,y,z,omega),dtype=numpy.uint8)
+            for bit_idx in range(len(q[0])):
+                if q[0][bit_idx]==0:
+                    continue
+                proj3d = numpy.bitwise_xor(self.db[q[0][bit_idx]][bit_idx,:,:,:],proj3d)
+            proj3d = numpy.add.reduce(proj3d,0)
 
 
-        #Projection 3: 2d-->1d
-        proj1d = numpy.zeros((1,omega),dtype=numpy.uint8)
-        for bit_idx in range(len(q[2])):
-            if q[2][bit_idx]==0:
-                continue
-            proj1d = numpy.bitwise_xor(utilities.scaleArrayGF(proj2d[bit_idx,:],q[2][bit_idx],base),proj1d)
-        proj1d = numpy.add.reduce(proj1d,0)
+
+            #scale everything by the GF(4) value in q
+            #Projection 2: 3d-->2d
+            proj2d = numpy.zeros((1,z,omega),dtype=numpy.uint8)
+            for bit_idx in range(len(q[1])):
+                if q[1][bit_idx]==0:
+                    continue
+                proj2d = numpy.bitwise_xor(utilities.scaleArrayGF(proj3d[bit_idx,:,:],q[1][bit_idx],base),proj2d)
+            proj2d = numpy.add.reduce(proj2d,0)
+
+
+            #Projection 3: 2d-->1d
+            proj1d = numpy.zeros((1,omega),dtype=numpy.uint8)
+            for bit_idx in range(len(q[2])):
+                if q[2][bit_idx]==0:
+                    continue
+                proj1d = numpy.bitwise_xor(utilities.scaleArrayGF(proj2d[bit_idx,:],q[2][bit_idx],base),proj1d)
+            proj1d = numpy.add.reduce(proj1d,0)
+        elif self.cubeDim == 1:
+            x,omega = self.db[1].shape
+            proj1d = numpy.zeros((1,omega),dtype=numpy.uint8)
+            for bit_idx in range(len(q[0])):
+                if q[0][bit_idx]==0:
+                    continue
+                proj1d = numpy.bitwise_xor(utilities.scaleArrayGF(proj2d[bit_idx,:],q[0][bit_idx],base),proj1d)
+            proj1d = numpy.add.reduce(proj1d,0)
+            
         return proj1d
