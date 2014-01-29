@@ -5,6 +5,46 @@ import sys, os
 import json,marshal
 import time
 
+def recv_timeout(the_socket,data_size,timeout=2):
+    #make socket non blocking
+    the_socket.setblocking(0)
+     
+    #total data partwise in an array
+    total_data=[];
+    data='';
+     
+    #beginning time
+    begin=time.time()
+    while 1:
+        #if you got some data, then break after timeout
+        if total_data and time.time()-begin > timeout:
+            break
+         
+        #if you got no data at all, wait a little longer, twice the timeout
+        elif time.time()-begin > timeout*2:
+            print('TIMEOUT, NO DATA')
+            break
+         
+        #recv something
+        try:
+            # data = the_socket.recv(data_size)
+            data = the_socket.recv()
+            if data:
+                # total_data.append(data)
+                total_data = total_data + data
+                #change the beginning time for measurement
+                begin=time.time()
+            else:
+                #sleep for sometime to indicate a gap
+                time.sleep(0.1)
+        except:
+            pass
+     
+    #join all parts to make final string
+    # return ''.join(total_data)
+    print('\n\ntotal data is ',total_data)
+    return total_data
+
 def generatePirQueries(searchIndex, numServers, cubeDim, queryDim,base):
 	# generates one PIR query for each cache node
 	polyDim = int((numServers-1)/cubeDim)
@@ -69,6 +109,7 @@ def distributePirQueries(numServers,cubeDim,pirQueries,BASE_PORT):
     host = ''
     backlog = 5 # Number of clients on wait.
     buf_size = 20000
+    buf_size = 10255
     errorFlag = 0
     print ('NUM SERVERS IS',numServers)
     try:
@@ -99,6 +140,7 @@ def distributePirQueries(numServers,cubeDim,pirQueries,BASE_PORT):
         for r in inputready:
             print('buf size is ',buf_size)
             data = r.recv(buf_size)
+            # data = recv_timeout(r,buf_size,5)  # THIS DOESN'T WORK FOR SOME REASON
             print('data size is ',len(data))
             if data:
                 try:
