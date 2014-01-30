@@ -7,12 +7,12 @@ from math import ceil
 import utilities, scipy.io
 
 BASE_PORT = 8888
-numServers = 4
-cubeDim = 3#1 #3
+numServers = 3
+cubeDim = 1 #3
 newDatabase = 0
-base = 4#2 #4
+base = 2 #4
 # dbFilenames = ['data/2048bytes/500files','data/2048bytes/2500files','data/2048bytes/5000files','data/2048bytes/7500files','data/2048bytes/10000files']
-dbFilenames = ['data_memory/2048bytes/2files']
+dbFilenames = ['data_memory/2048bytes/500files']
 
 trials = 1
 tot_times = []

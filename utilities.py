@@ -26,20 +26,25 @@ def file_len(fname):
     return i + 1
 	
 def multGf(a,b,base):
-	# a is an element of GF4
-	# b is a byte, i.e. 4 elements of GF(4), each 2 bits long
-	global GF4_TABLE	# access the global table
-	global GF8_TABLE	# access the global table
-	if base == 4:
-		table = GF4_TABLE
-	elif base == 16:
-		table = GF16_TABLE
-	try:
-		return int(table[a][b])
-	except:
-		print( "This is not a valid input to a GF multiplication in base",base,' : ' ,a,b)
-		print( table)
-		return	
+    # a is an element of GF4
+    # b is a byte, i.e. 4 elements of GF(4), each 2 bits long
+
+    # Check if binary (base 2), then just do regular multiplication
+    if base == 2:
+        return a*b
+
+    global GF4_TABLE	# access the global table
+    global GF8_TABLE	# access the global table
+    if base == 4:
+        table = GF4_TABLE
+    elif base == 16:
+        table = GF16_TABLE
+    try:
+        return int(table[a][b])
+    except:
+        print( "This is not a valid input to a GF multiplication in base",base,' : ' ,a,b)
+        print( table)
+        return	    
 	
 def db2bitarray(dbContent,cubeSize,cubeDim,multFactor,base):
 	num_file_bits = len(max(dbContent,key=len))

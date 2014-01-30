@@ -21,6 +21,7 @@ class Server:
             self.cubeDim = cubeDim
             self.cubeSize = db.shape[0]
             self.fileSize = fileSize
+            
         
     def getDb(self):
         return self.db
@@ -89,12 +90,14 @@ class Server:
                 proj1d = numpy.bitwise_xor(utilities.scaleArrayGF(proj2d[bit_idx,:],q[2][bit_idx],base),proj1d)
             proj1d = numpy.add.reduce(proj1d,0)
         elif self.cubeDim == 1:
+            # print('q is ',q,'\n\n\n')
             x,omega = self.db[1].shape
             proj1d = numpy.zeros((1,omega),dtype=numpy.uint8)
             for bit_idx in range(len(q[0])):
                 if q[0][bit_idx]==0:
                     continue
-                proj1d = numpy.bitwise_xor(utilities.scaleArrayGF(proj2d[bit_idx,:],q[0][bit_idx],base),proj1d)
+                proj1d = numpy.bitwise_xor(utilities.scaleArrayGF(self.db[1][q[0][bit_idx]],q[0][bit_idx],base),proj1d)
             proj1d = numpy.add.reduce(proj1d,0)
+        print('proj1d is ',proj1d,len(proj1d))
             
         return proj1d

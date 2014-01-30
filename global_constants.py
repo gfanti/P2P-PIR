@@ -1,4 +1,5 @@
  # global constants
+  
  
  # 4x256 giving the product of any element of GF(4) with any byte value, processed in chunks of 2 bytes (ie elements of GF(4))
 GF4_TABLE = [[0]*256, range(256), \

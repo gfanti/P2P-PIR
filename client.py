@@ -46,58 +46,59 @@ def recv_timeout(the_socket,data_size,timeout=2):
     return total_data
 
 def generatePirQueries(searchIndex, numServers, cubeDim, queryDim,base):
-	# generates one PIR query for each cache node
-	polyDim = int((numServers-1)/cubeDim)
-	# find the appropriate indices of the query file in the database
-	sq = pow(queryDim,2)
-	i = int(searchIndex / sq)
-	j = int((searchIndex % sq) / queryDim)
-	k = int(searchIndex % queryDim)
-	print ('desired indices are',i,j,k)
-	# find the canonical vectors
-	e = []
-	equery = [0 for l in range(queryDim)]
-	equery[i] = 1
-	e.append( equery )
-	equery = [0 for l in range(queryDim)]
-	equery[j] = 1;
-	e.append(equery)
-	equery = [0 for l in range(queryDim)]
-	equery[k] = 1;
-	e.append(equery)
-	
-	# find the random strings for each dimension of the cube
-	a = [[]]*polyDim
-	for p in range(polyDim):
-		a_temp = []
-		for r in range(cubeDim):
-			# change this to random integers in GF(base)
-			# a_temp.append( [random.randint(0,base-1) for q in range(0,queryDim)] )
-			a_temp.append( [0 for q in range(0,queryDim-1)] + [1] )
-		a[p] = a_temp
-	# raw_input('here')
-		
-	# add multiples of the random string to the desired vector
-	queries = [[]]*numServers
-	queries[0] = a[-1]
-	# print 'before',queries
-	# print 'polydim is',polyDim
-	for r in range(1,numServers):
-		dimQuery = copy.deepcopy(e)
-		# print 'e is',e
-		r_pow = 1
-		# print 'server',r
-		for deg in range(polyDim):
-			r_pow = multGf(r_pow,r,base)
-			# print 'r_pow is ',r_pow
-			for q in range(0,cubeDim):
-				# print dimQuery[q],'and',a[deg][q]
-				dimQuery[q] = ( [multGf(r_pow,x,base) ^ y for x,y in zip( a[deg][q] , dimQuery[q] ) ]) # make this addition in GF4
-		queries[r] = dimQuery
-		# print 'r is ',r,'query is \n',queries
-	# print 'queries is',queries
-	# raw_input('hi here ')
-	return queries	
+    # generates one PIR query for each cache node
+    polyDim = int((numServers-1)/cubeDim)
+    # find the appropriate indices of the query file in the database
+    
+    indices = []
+    if cubeDim == 3:
+        sq = pow(queryDim,cubeDim)
+        indices.append( int(searchIndex / sq) )
+        indices.append( int((searchIndex % sq) / queryDim) )
+        indices.append( int(searchIndex % queryDim) )
+        # find the canonical vectors
+    elif cubeDim == 1:
+        indices.append(searchIndex)
+    print('desired indices are ',indices,'querydim is ',queryDim)
+    e = []
+    for idx in indices:
+        equery = [0 for l in range(queryDim)]
+        equery[idx] = 1
+        e.append( equery )
+    # find the random strings for each dimension of the cube
+    
+    a = [[]]*polyDim
+    for p in range(polyDim):
+        a_temp = []
+        for r in range(cubeDim):
+            # change this to random integers in GF(base)
+            # a_temp.append( [random.randint(0,base-1) for q in range(0,queryDim)] )
+            # a_temp.append( [0 for q in range(0,queryDim-1)] + [1] )
+            a_temp.append( [0 for q in range(0,queryDim)])
+        a[p] = a_temp
+    # raw_input('here')
+        
+    # add multiples of the random string to the desired vector
+    queries = [[]]*numServers
+    queries[0] = a[-1]
+    # print 'before',queries
+    # print 'polydim is',polyDim
+    for r in range(1,numServers):
+        dimQuery = copy.deepcopy(e)
+        # print 'e is',e
+        r_pow = 1
+        # print 'server',r
+        for deg in range(polyDim):
+            r_pow = multGf(r_pow,r,base)
+            # print 'r_pow is ',r_pow
+            for q in range(0,cubeDim):
+                # print dimQuery[q],'and',a[deg][q]
+                dimQuery[q] = ( [multGf(r_pow,x,base) ^ y for x,y in zip( a[deg][q] , dimQuery[q] ) ]) # make this addition in GF4
+        queries[r] = dimQuery
+        # print 'r is ',r,'query is \n',queries
+    # print ('queries is',queries)
+    # raw_input('hi here ')
+    return queries	
 
 def distributePirQueries(numServers,cubeDim,pirQueries,BASE_PORT):
 
@@ -186,8 +187,9 @@ searchIndex = 0
 t1 = time.time()
 
 # generate the PIR queries
+# print('querydim is ',queryDim)
 pirQueries = generatePirQueries(searchIndex,numServers,cubeDim,queryDim,base)
-print('queries',pirQueries)
+# print('queries',pirQueries)
 
 # submit the queries to the servers
 results,errorFlag = distributePirQueries(numServers,cubeDim,pirQueries,BASE_PORT)
@@ -198,6 +200,8 @@ if not errorFlag:
     if (base == 4) or (base==2):
         for s in range(numServers):
             PIR_result = [a^b for a,b in zip(PIR_result , results[s])]
+            # print(PIR_result[:20])
+            # print('PIR RESULT IS ',''.join([chr(z) for z in PIR_result[:20]]))
     elif base == 16:
         if numServers==4:
             scale = [6,1,1,1]
@@ -208,14 +212,14 @@ if not errorFlag:
         elif numServers == 13:
             scale = [10,5,7,10,10,13,8,6,4,14,9,10,9]
         elif numServers == 16:
-            scale = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]		
+            scale = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
         # now combine the results appropriately
         for s in range(numServers):
             PIR_result = [a^utilities.multGf(scale[s],b,base) for a,b in zip(PIR_result , results[s])]	
-                
+    print('pir results',PIR_result[:10])
     PIR_result = ''.join([chr(z) for z in PIR_result])
     print ('pir result is ',PIR_result[:10])
-
+    # print ('pir result is ',PIR_result)
 
     # print '\n\nYour local result is: ',PIR_result
 
