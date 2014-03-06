@@ -1,3 +1,7 @@
+# server_class.py 
+#
+# Class that stores the database and manages operations on that database.
+
 from math import ceil
 import numpy
 import utilities
@@ -21,7 +25,7 @@ class Server:
             self.cubeDim = cubeDim
             self.cubeSize = db.shape[0]
             self.fileSize = fileSize
-            
+        self.nBlocks = pow(self.cubeSize,self.cubeDim)
         
     def getDb(self):
         return self.db
@@ -98,6 +102,26 @@ class Server:
                     continue
                 proj1d = numpy.bitwise_xor(utilities.scaleArrayGF(self.db[1][q[0][bit_idx]],q[0][bit_idx],base),proj1d)
             proj1d = numpy.add.reduce(proj1d,0)
-        print('proj1d is ',proj1d,len(proj1d))
+        # print('proj1d is ',proj1d,len(proj1d))
             
         return proj1d
+        
+    def submitPirQueryHash(self,q,base,bins):
+        if self.cubeDim > 1:
+            return 0
+        elif self.cubeDim == 1:
+            x,omega = self.db[1].shape
+            results = []
+            for bin in bins:
+                proj1d = numpy.zeros(omega,dtype=numpy.uint8)            
+                for bin_idx in bin:
+                    if q[0][bin_idx]==0:
+                        continue
+                    # print('array is ',utilities.scaleArrayGF(self.db[1][q[0][bin_idx]],q[0][bin_idx],base))
+                    proj1d = numpy.bitwise_xor(utilities.scaleArrayGF(self.db[1][q[0][bin_idx]],q[0][bin_idx],base),proj1d)
+                    # proj1d = numpy.add.reduce(proj1d,0)
+                results.append(proj1d)
+        print('proj1d is ',proj1d,len(proj1d))
+        results = [list(arr) for arr in results]
+            
+        return results

@@ -1,10 +1,17 @@
+# server.py
+#
+# Runs all the things that a server should do, including calling the database, processing queries, communicating with the client
+
 import socket
 import sys
 from _thread import *
 from server_class import *
 import utilities,json,os,marshal
 import time
+from bitstring import BitArray
+import random
 
+hashFlag = 0
 
 if len(sys.argv) < 5:
     print( "Not enough input arguments: cubeDim,port,newDatabase")
@@ -16,6 +23,11 @@ newDatabase = int(sys.argv[3])
 dbFilename = sys.argv[4]
 base = int(sys.argv[5])
 
+if len(sys.argv) >= 7:
+    binSeed = int(sys.argv[6])
+    nBins = int(sys.argv[7])
+    hashFlag = 1  # the server should hash the results into bins
+    
 backlog = 5
 
 t = time.time()
@@ -81,16 +93,38 @@ query = marshal.loads(data)
 
 f=open(str(port)+'.txt','a')
 t = time.time()
-# run the PIR query
-result = serv.submitPirQuery(query,base).tolist()
-result = [int(a) for a in result]
+
+# # run the PIR query
+
+if not hashFlag:
+    result = serv.submitPirQuery(query,base).tolist()
+    result = [int(a) for a in result]
+else:
+    # generate the mapping from database elements to bins
+    random.seed(binSeed)
+    print('cubesize is ',serv.cubeSize)
+    binExpansion = 3
+    bins = [[] for i in range(nBins)]
+    for fileIdx in range(serv.nBlocks):
+        for c in range(binExpansion):
+            randBin = random.randint(0,nBins-1)
+            while fileIdx in bins[randBin]:
+                randBin = random.randint(0,nBins-1)
+            bins[randBin].append(fileIdx)
+    # print('bins is ',bins)
+    result = serv.submitPirQueryHash(query,base,bins)
+    # print('result is ',result)
+    # print('result dims',[len(item) for item in result])
+
 t = time.time()-t
 f.write(str(t)+'\n')
 f.close()
 
 # return the result to the client
 print ('size result',len(result),len(marshal.dumps([port]+result)), len(marshal.loads(marshal.dumps([port]+result))))
-print('result contains endfile: ',(26 in result), port)
-client_socket.send(marshal.dumps([port]+result))
+# print('result is',result[0][:10])
+# client_socket.send(marshal.dumps([port]+result))
+utilities.send_msg(client_socket,marshal.dumps([port]+result))
+
 t = time.time()
 client_socket.close()
