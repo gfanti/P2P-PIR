@@ -27,7 +27,7 @@ if __name__=='__main__':
     seed = 0
     nBins = 10
     # dbFilenames = ['data/2048bytes/500files','data/2048bytes/2500files','data/2048bytes/5000files','data/2048bytes/7500files','data/2048bytes/10000files']
-    dbFilenames = ['data_memory/2048bytes/2files']
+    dbFilenames = ['data_memory/4bytes/2files']
 
 
     trials = 1

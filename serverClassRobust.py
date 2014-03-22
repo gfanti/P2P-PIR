@@ -42,11 +42,12 @@ class RobustServer:
     def submitPirQuery(self,q,base):
         """Process a regular linear PIR query"""
         x,omega = self.db.shape
-        proj1d = numpy.zeros(omega,dtype=numpy.uint32)            
+        proj1d = numpy.zeros(omega,dtype=numpy.uint64)            
         for bit_idx in range(len(q)):
             if q[bit_idx]==0:
                 continue
             proj1d = (utilities.scaleArrayGF(self.db[bit_idx],q[bit_idx],base) + proj1d) % base
+            
             
         return proj1d
         
@@ -54,12 +55,11 @@ class RobustServer:
         """Process a hashed PIR query"""
         x,omega = self.db[1].shape
         results = []
-        proj1d = numpy.zeros(omega,dtype=numpy.uint32)            
+        proj1d = numpy.zeros(omega,dtype=numpy.uint64)            
         for bin_idx in bin:
             if q[bin_idx]==0:
                 continue
             proj1d = (utilities.scaleArrayGF(self.db[bin_idx],q[bin_idx],base) + proj1d) % base
-        print('proj1d is ',proj1d,len(proj1d))
         results = [list(arr) for arr in results]
             
         return results

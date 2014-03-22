@@ -31,7 +31,7 @@ def multGf(a,b,base):
     elif base == 16:
         table = GF16_TABLE
     elif base == 65537: #(pow(2,16)+1):
-        return (a*b)%65537
+        return (a*b)%base
     try:
         return int(table[a][b])
     except:
@@ -46,37 +46,35 @@ def db2bitarray(dbContent,cubeSize,cubeDim,multFactor,base):
         # convert the DB into bitstrings
         for item in dbContent:
             item = item.ljust(num_file_bits)
-            db = db + [numpy.uint8(ord(y)) for y in item]
+            db = db + [numpy.uint64(ord(y)) for y in item]
             # db = db + [ord(' ') for y in range(num_file_bits-len(item))]
         # fill in the last slots of the database with all spaces
         for item in range(int(pow(cubeSize,cubeDim) - len(dbContent))):
-            db = db + [numpy.uint8(ord(' '))]*num_file_bits
+            db = db + [numpy.uint64(ord(' '))]*num_file_bits
     else:
         for item in dbContent:
             item = item.ljust(num_file_bits)
-            db = db + [numpy.uint8(multGf(multFactor,int(ord(y)),base)) for y in item]
+            db = db + [numpy.uint64(multGf(multFactor,int(ord(y)),base)) for y in item]
             # db = db + [multGf4(multFactor,int(ord(' '))) for y in range(num_file_bits-len(item))]
         # fill in the last slots of the database with all spaces
         for item in range(int(pow(cubeSize,cubeDim) - len(dbContent))):
-            db = db + [numpy.uint8(multGf(multFactor,int(ord(' ')),base))]*num_file_bits
+            db = db + [numpy.uint64(multGf(multFactor,int(ord(' ')),base))]*num_file_bits
     return db
 		
 def scaleArrayGF(x,a,base):
-	# x is the array
-	# a is the GF(4) element to scale by
-	if a == 1:
-		return x
-	else:
-		arrayShape = x.shape
-		# print 'Were in the scaleArray. arrayShape is ',arrayShape,type(x),'x[:] is',x[:]
-		b = x[:].reshape(-1,1)
-		# print 'b is ',b, 'a is',a
-		
-		xnew = numpy.array([multGf(a,item,base) for item in b]).reshape(arrayShape)
-		# print 'new shape is',xnew.shape, arrayShape
-		# print 'new array is ',xnew,'old is',x
-		# raw_input()
-		return xnew
+    """Multiply an array x by a constant a in base"""
+    # x is the array
+    # a is the GF(4) element to scale by
+    if a == 1:
+        return x
+    else:
+        arrayShape = x.shape
+        # print 'Were in the scaleArray. arrayShape is ',arrayShape,type(x),'x[:] is',x[:]
+        b = x[:].reshape(-1,1)
+        # print 'b is ',b, 'a is',a
+        
+        xnew = numpy.array([multGf(a,item,base) for item in b]).reshape(arrayShape)
+        return xnew
 
 def retrieve_webpage(url):
 	webbrowser.open(url)

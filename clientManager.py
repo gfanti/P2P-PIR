@@ -20,13 +20,14 @@ def generatePirQueries(searchIndex, dbSize, numServers, base):
     # generate the shares for masking
     for i in range(numServers-1):
         a[i] = [random.randint(0,base-1) for q in range(0,dbSize)]
-        a[i] = [random.randint(0,2) for q in range(0,dbSize)]
+        a[i] = [5 for q in range(0,dbSize)]
+        a[i][1] = 0#base-1
         
     # if there are only 2 servers, we don't need to worry about collusion, and just use a and a+e_i
     if numServers == 2:
         q[0] = [item for item in a[0]];
         q[1] = [item for item in a[0]];
-        q[1][searchIndex] += 1
+        q[1][searchIndex] = (q[1][searchIndex] + 1) % base
     # if there are more than 2 servers, we use shamir secret sharing
     else:
         # construct the related polynomials
@@ -37,6 +38,7 @@ def generatePirQueries(searchIndex, dbSize, numServers, base):
             for j in range(1,numServers):
                 xeval = pow(x,j)
                 q[i] = [(a+b)%base for (a,b) in zip(q[i],[xeval*c for c in a[j]])] # add term in polynomial
+    # print(' queries are',q)
     return q
     
 def onionPeel(PIR_result, searchIndex, bins, hashLength):
@@ -132,11 +134,12 @@ def distributePirQueries(numServers,pirQueries,BASE_PORT):
     return (results,errorFlag)
 
 def decodeResults(results,fileSize,base,numServers,hashFlag,searchIndex):
+    """Aggregate the PIR results from all the servers"""
     if hashFlag:
         # convert back to ints if necessary
         results = [[[ord(a) for a in item] for item in servitem] for servitem in results]
 
-    PIR_result = numpy.zeros((fileSize),dtype=numpy.uint8)
+    PIR_result = numpy.zeros((fileSize),dtype=numpy.uint64)
     PIR_result = [[0 for i in range(fileSize)] for i in range(nBins)]
     print([len(res) for res in results])
     # print(results[0][:10])
@@ -168,9 +171,10 @@ def decodeResults(results,fileSize,base,numServers,hashFlag,searchIndex):
         for s in range(numServers):
             PIR_result = [a^utilities.multGf(scale[s],b,base) for a,b in zip(PIR_result , results[s])]	
     elif numServers == 2:
-        PIR_result = [abs(a-b)%base for a,b in zip(results[1] , results[0])]
-        PIR_result = ''.join([chr(z) for z in PIR_result])    
-    print('pir results',PIR_result)
+        PIR_result = [(a-b)%base for a,b in zip(results[1] , results[0])]
+    
+    PIR_result = ''.join([chr(z) for z in PIR_result])    
+    # print('pir results',PIR_result)
     # for idx in range(len(PIR_result)):
         # PIR_result[idx] = ''.join([chr(z) for z in PIR_result[idx]])    
     
@@ -220,7 +224,7 @@ if __name__=='__main__':
             fileSize = len(results[0])
         PIR_result = decodeResults(results,fileSize,base,numServers,hashFlag,searchIndex)
         # print ('pir result is ',PIR_result[0][:10])
-        # print ('pir result is ',PIR_result)
+        print ('pir result is ',PIR_result)
 
         # print '\n\nYour local result is: ',PIR_result
 
