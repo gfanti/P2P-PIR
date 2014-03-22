@@ -20,14 +20,15 @@ if __name__=='__main__':
     # set the relevant parameters
     BASE_PORT = 8888
     numServers = 2
-    cubeDim = 1 #3
-    newDatabase = 1
+    cubeDim = 1 #GET RID OF THE CUBE DIMENSION
+    newDatabase = 0
     base = pow(2,16)+1
-    hashFlag = 1
+    hashFlag = 0
     seed = 0
     nBins = 10
     # dbFilenames = ['data/2048bytes/500files','data/2048bytes/2500files','data/2048bytes/5000files','data/2048bytes/7500files','data/2048bytes/10000files']
-    dbFilenames = ['data_memory/2048bytes/500files']
+    dbFilenames = ['data_memory/2048bytes/2files']
+
 
     trials = 1
     tot_times = []
@@ -45,12 +46,11 @@ if __name__=='__main__':
     for dbIdx in range(len(dbFilenames)):
 
         dbFilename = dbFilenames[dbIdx]
-        queryDim = int(ceil(pow(utilities.file_len(dbFilename),1.0/cubeDim)))
 
         # if necessary, construct a new database and exit
         if newDatabase or not os.path.isfile(dbFilename+str(base)+'_db.npy'):
             print ("Making database for ",dbFilename)
-            cmd = ['server.py',str(cubeDim),str(BASE_PORT),str(newDatabase),dbFilename,str(base)]
+            cmd = ['serverManager.py',str(BASE_PORT),str(newDatabase),dbFilename,str(base)]
             child = subprocess.Popen(cmd,shell=True)
             child.wait()
             
@@ -59,6 +59,7 @@ if __name__=='__main__':
         # otherwise, run the PIR queries
         else:
 
+            queryDim = int(ceil(pow(utilities.file_len(dbFilename),1.0/cubeDim)))
             times = []
             for k in range(trials):
                 print ('Running trial ',k)
@@ -66,12 +67,11 @@ if __name__=='__main__':
                 children = []
                 port = []
                 for i in range(numServers):
-                    # cmd = ["python", "server.py", "--name="+ my_list[i]]
                     port.append(BASE_PORT + i)
                     if hashFlag:
-                        cmd = ['server.py',str(cubeDim ),str(port[i]),str(newDatabase),dbFilename,str(base),str(seed),str(nBins)]
+                        cmd = ['serverManager.py',str(port[i]),str(newDatabase),dbFilename,str(base),str(seed),str(nBins)]
                     else:
-                        cmd = ['server.py',str(cubeDim ),str(port[i]),str(newDatabase),dbFilename,str(base)]                
+                        cmd = ['serverManager.py',str(port[i]),str(newDatabase),dbFilename,str(base)]                
                     children.append( subprocess.Popen( cmd, shell=True ) )
                 # wait for the servers to load
                 time.sleep(10)
@@ -79,9 +79,9 @@ if __name__=='__main__':
                 t1 = time.time()
                 # call the client process
                 if hashFlag:
-                    cmd = ['client.py',str(numServers),str(cubeDim),str(queryDim),str(BASE_PORT),str(base),str(seed),str(nBins)]
+                    cmd = ['clientManager.py',str(utilities.file_len(dbFilename)),str(numServers),str(BASE_PORT),str(base),str(seed),str(nBins)]
                 else:
-                    cmd = ['client.py',str(numServers),str(cubeDim),str(queryDim),str(BASE_PORT),str(base)]            
+                    cmd = ['clientManager.py',str(utilities.file_len(dbFilename)),str(numServers),str(BASE_PORT),str(base)]            
                 children.append( subprocess.Popen( cmd, shell=True ) )
 
                 # make sure all the child processes are finished
