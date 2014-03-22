@@ -20,8 +20,6 @@ def generatePirQueries(searchIndex, dbSize, numServers, base):
     # generate the shares for masking
     for i in range(numServers-1):
         a[i] = [random.randint(0,base-1) for q in range(0,dbSize)]
-        a[i] = [5 for q in range(0,dbSize)]
-        a[i][1] = 0#base-1
         
     # if there are only 2 servers, we don't need to worry about collusion, and just use a and a+e_i
     if numServers == 2:
@@ -38,7 +36,6 @@ def generatePirQueries(searchIndex, dbSize, numServers, base):
             for j in range(1,numServers):
                 xeval = pow(x,j)
                 q[i] = [(a+b)%base for (a,b) in zip(q[i],[xeval*c for c in a[j]])] # add term in polynomial
-    # print(' queries are',q)
     return q
     
 def onionPeel(PIR_result, searchIndex, bins, hashLength):
