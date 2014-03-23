@@ -4,12 +4,13 @@ import socket, select
 import sys, os
 import json,marshal
 import time
+import numpy as np
 
     
 def generatePirQueries(searchIndex, dbSize, numServers, base):
     """ Generates one PIR query for each server in the system"""
-    a = [[] for i in range(numServers-1)]
-    q = [[] for i in range(numServers)]
+    a = [[] for i in range(numServers-1)] # random strings defining polynomials for secret sharing
+    q = [[] for i in range(numServers)] # queries to be sent to each server
     
     # generate the indicator vector for desired file
     e = []
@@ -20,7 +21,6 @@ def generatePirQueries(searchIndex, dbSize, numServers, base):
     # generate the shares for masking
     for i in range(numServers-1):
         a[i] = [random.randint(0,base-1) for q in range(0,dbSize)]
-        
     # if there are only 2 servers, we don't need to worry about collusion, and just use a and a+e_i
     if numServers == 2:
         q[0] = [item for item in a[0]];
@@ -29,13 +29,12 @@ def generatePirQueries(searchIndex, dbSize, numServers, base):
     # if there are more than 2 servers, we use shamir secret sharing
     else:
         # construct the related polynomials
-        print('generatePIRqueries is possibly not done yet!')
         for i in range(numServers):
             x = i+1
             q[i] = [item for item in equery]
             for j in range(1,numServers):
                 xeval = pow(x,j)
-                q[i] = [(a+b)%base for (a,b) in zip(q[i],[xeval*c for c in a[j]])] # add term in polynomial
+                q[i] = [(a+b)%base for (a,b) in zip(q[i],[xeval*c%base for c in a[j-1]])] # add term in polynomial
     return q
     
 def onionPeel(PIR_result, searchIndex, bins, hashLength):
@@ -130,7 +129,7 @@ def distributePirQueries(numServers,pirQueries,BASE_PORT):
         item.close()
     return (results,errorFlag)
 
-def decodeResults(results,fileSize,base,numServers,hashFlag,searchIndex):
+def decodeResults(results,fileSize,base,numServers,hashFlag,searchIndex,Vinv):
     """Aggregate the PIR results from all the servers"""
     if hashFlag:
         # convert back to ints if necessary
@@ -167,13 +166,16 @@ def decodeResults(results,fileSize,base,numServers,hashFlag,searchIndex):
         # now combine the results appropriately
         for s in range(numServers):
             PIR_result = [a^utilities.multGf(scale[s],b,base) for a,b in zip(PIR_result , results[s])]	
-    elif numServers == 2:
-        PIR_result = [(a-b)%base for a,b in zip(results[1] , results[0])]
+    elif base == 65537:
+        if numServers == 2:
+            PIR_result = [(a-b)%base for a,b in zip(results[1] , results[0])]
+        else:
+            # print(np.array(results))
+            VinvTimesR = np.array([[int((Vinv[-1,i]*item)%base) for item in results[i]] for i in range(numServers)])
+            PIR_result = np.sum(VinvTimesR,0)%base  
+            print('result',PIR_result,PIR_result.shape)
     
-    PIR_result = ''.join([chr(z) for z in PIR_result])    
-    # print('pir results',PIR_result)
-    # for idx in range(len(PIR_result)):
-        # PIR_result[idx] = ''.join([chr(z) for z in PIR_result[idx]])    
+    PIR_result = ''.join([chr(z) for z in PIR_result])
     
     return PIR_result
 
@@ -203,6 +205,13 @@ if __name__=='__main__':
                     randBin = random.randint(0,nBins-1)
                 bins[randBin].append(fileIdx)
     searchIndex = 0
+    
+    # build the sampling matrix V
+    V = [[] for tmp in range(numServers)]
+    for x in range(1,numServers+1):
+        V[x-1] = [pow(x,l) for l in range(numServers-1,-1,-1)]
+    Vinv = utilities.invFiniteFieldMat(V,base)
+    
     t1 = time.time()
 
     # generate the PIR queries
@@ -219,7 +228,7 @@ if __name__=='__main__':
         
         else:
             fileSize = len(results[0])
-        PIR_result = decodeResults(results,fileSize,base,numServers,hashFlag,searchIndex)
+        PIR_result = decodeResults(results,fileSize,base,numServers,hashFlag,searchIndex,Vinv)
         # print ('pir result is ',PIR_result[0][:10])
         print ('pir result is ',PIR_result)
 

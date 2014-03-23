@@ -7,6 +7,7 @@ import webbrowser
 import os,marshal,copy
 import struct
 import hashlib
+import fractions
 
 def clearScreen():
 	os.system('cls')
@@ -113,3 +114,47 @@ def isSingleton(file,hashLength):
     return hashComputed == hashRead
     # return file[:hashLength] == file[-hashLength:]
     
+def invFiniteFieldMat(V,base):
+    """Returns the inverse numServersxnumServers Vandermonde matrix in base base"""
+    Vinv = numpy.linalg.inv(V);
+    for i in range(Vinv.shape[0]):
+        for j in range(Vinv.shape[1]):
+            x = Vinv[i,j]
+            parts = [0,0]
+            parts = rationalize(x)
+            if x%1 > 0:
+                num = parts[0]
+                while x%1 > 0:
+                    num += base
+                    x = num / parts[1]
+            x = int(x % base)
+            Vinv[i,j] = x
+    return Vinv
+    
+def rationalize(x):
+    parts = [0,0]
+    st = str(x)
+    if len(st) > 4:
+        if (st[4] == '0'):
+            x = round(x,10)
+            frac = fractions.Fraction(x)
+            parts = [frac.numerator, frac.denominator]
+        elif st.split('.')[1][:5] == '33333':
+            parts[0] = 3 * int(x) + 1*(x>0) - 1*(x<0)
+            parts[1] = 3
+        elif st.split('.')[1][:5] == '66666':
+            parts[0] = 3 * int(x) + 2*(x>0) - 2*(x<0)
+            parts[1] = 3
+        elif st.split('.')[1][:5] == '16666':
+            parts[0] = 6 * int(x) + 1*(x>0) - 1*(x<0)
+            parts[1] = 6
+        elif st.split('.')[1][:5] == '83333':
+            parts[0] = 6 * int(x) + 5*(x>0) - 5*(x<0)
+            parts[1] = 6
+        else:
+            print ('string',st.split('.')[1][:5])
+    else:
+        frac = fractions.Fraction(round(x,4))
+        parts = [frac.numerator, frac.denominator]
+    
+    return parts
