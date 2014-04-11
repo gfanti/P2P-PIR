@@ -1,10 +1,11 @@
-from utilities import *
+import utilities
 import random
 import socket, select
 import sys, os
 import json,marshal
 import time
 import numpy as np
+import FiniteFieldCS
 
     
 def generatePirQueries(searchIndex, dbSize, numServers, base):
@@ -37,22 +38,7 @@ def generatePirQueries(searchIndex, dbSize, numServers, base):
                 q[i] = [(a+b)%base for (a,b) in zip(q[i],[xeval*c%base for c in a[j-1]])] # add term in polynomial
     return q
     
-def onionPeel(PIR_result, searchIndex, bins, hashLength):
-    retrieved = 0
-    while not retrieved:
-        for binIdx in range(len(bins)):
-            if utilities.isSingleton(PIR_result[binIdx],hashLength):
-                print("singleton")
-                if searchIndex in bins[binIdx]:
-                    retrieved = 1
-                    break
-                # # Remove the singleton from the other bins
-                # singletonId
-                # locations
-                # PIR_result[binIdx] -= 
-                # break
-            retrieved = 1
-    return PIR_result
+
 
 def distributePirQueries(numServers,pirQueries,BASE_PORT):
 
@@ -96,7 +82,7 @@ def distributePirQueries(numServers,pirQueries,BASE_PORT):
         for r in inputready:
             # print('buf size is ',buf_size)
             # data = r.recv(buf_size)
-            data = recv_msg(r)  # THIS DOESN'T WORK FOR SOME REASON
+            data = utilities.recv_msg(r)  # THIS DOESN'T WORK FOR SOME REASON
             
             # print('data size is ',len(data))
             if data:
@@ -113,8 +99,9 @@ def distributePirQueries(numServers,pirQueries,BASE_PORT):
                     # print ('The received data was ',data,len(data),'\n\n')
                     errorFlag = 1
                     return([],errorFlag)
+                # print('res is ',res)
                 rPort = int(res.pop(0)) - BASE_PORT
-                results[rPort] = res
+                results[rPort] = utilities.chunks(res,int(len(res)/nBins))
                 # print('res is ',res,rPort)
 
                 result_cnt = result_cnt + 1
@@ -130,54 +117,67 @@ def distributePirQueries(numServers,pirQueries,BASE_PORT):
     return (results,errorFlag)
 
 def decodeResults(results,fileSize,base,numServers,hashFlag,searchIndex,Vinv):
-    """Aggregate the PIR results from all the servers"""
-    if hashFlag:
-        # convert back to ints if necessary
-        results = [[[ord(a) for a in item] for item in servitem] for servitem in results]
-
-    PIR_result = numpy.zeros((fileSize),dtype=numpy.uint64)
+    """ Aggregates the PIR results from all the servers into a numeric list or
+        list of lists """
+        
+    # Initialize the results structure
+    PIR_result = np.zeros((fileSize),dtype=np.uint64)
     PIR_result = [[0 for i in range(fileSize)] for i in range(nBins)]
     print([len(res) for res in results])
     # print(results[0][:10])
     # print(PIR_result)
     # print([len(a) for a in results[0]],[len(a) for a in PIR_result])
-    if ((base == 4) or (base==2)) and (numServers==2):
-        for s in range(numServers):          
-            print(len(PIR_result))
-            for idx in range(len(PIR_result)):
-                if not hashFlag:
-                    PIR_result[idx] = [a^b for a,b in zip(PIR_result[idx] , results[s])]
-                else:               
-                    PIR_result[idx] = [a^b for a,b in zip(PIR_result[idx] , results[s][idx])]
-        if hashFlag:    
-            PIR_result = onionPeel(PIR_result,searchIndex,bins,hashLength)
+    # if ((base == 4) or (base==2)) and (numServers==2):
+        # for s in range(numServers):          
+            # print(len(PIR_result))
+            # for idx in range(len(PIR_result)):
+                # if not hashFlag:
+                    # PIR_result[idx] = [a^b for a,b in zip(PIR_result[idx] , results[s])]
+                # else:               
+                    # PIR_result[idx] = [a^b for a,b in zip(PIR_result[idx] , results[s][idx])]
+        # if hashFlag:    
+            # PIR_result = onionPeel(PIR_result,searchIndex,bins,hashLength)
                 
-    elif base == 16:
-        if numServers==4:
-            scale = [6,1,1,1]
-        elif numServers == 7:
-            scale = [6,7,13,11,10,12,6]
-        elif numServers == 10:
-            scale = [4,1,2,2,13,13,10,10,4,4]
-        elif numServers == 13:
-            scale = [10,5,7,10,10,13,8,6,4,14,9,10,9]
-        elif numServers == 16:
-            scale = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-        # now combine the results appropriately
-        for s in range(numServers):
-            PIR_result = [a^utilities.multGf(scale[s],b,base) for a,b in zip(PIR_result , results[s])]	
-    elif base == 65537:
-        if numServers == 2:
-            PIR_result = [(a-b)%base for a,b in zip(results[1] , results[0])]
-        else:
-            # print(np.array(results))
-            VinvTimesR = np.array([[int((Vinv[-1,i]*item)%base) for item in results[i]] for i in range(numServers)])
-            PIR_result = np.sum(VinvTimesR,0)%base  
+    # elif base == 16:
+        # if numServers==4:
+            # scale = [6,1,1,1]
+        # elif numServers == 7:
+            # scale = [6,7,13,11,10,12,6]
+        # elif numServers == 10:
+            # scale = [4,1,2,2,13,13,10,10,4,4]
+        # elif numServers == 13:
+            # scale = [10,5,7,10,10,13,8,6,4,14,9,10,9]
+        # elif numServers == 16:
+            # scale = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+        # # now combine the results appropriately
+        # for s in range(numServers):
+            # PIR_result = [a^utilities.multGf(scale[s],b,base) for a,b in zip(PIR_result , results[s])]	
+            
+    # At the moment, this has only been tested on one prime base (65537), but this code /should/ work for other
+    #       prime bases as well
+    
+    if base == 65537:
+        if numServers == 2: # subtract results
+            PIR_result = [[(a-b)%base for a,b in zip(r1,r2)] for r1,r2 in zip(results[1] , results[0])]
+            if not hashFlag:
+                PIR_result = PIR_result[0]
+            print('PIR RESULT',PIR_result)
+            
+        else:   # multiply by the appropriate matrix
+            print('results',np.array(results))
+            results = np.array(results)
+            VinvTimesR = np.array([[[int((Vinv[-1,i]*item)%base) for item in results[i,k]] for i in range(numServers)] for k in range(len(results[0]))])
+            if not hashFlag:
+                VinvTimesR = VinvTimesR[0]
+            PIR_result = np.sum(VinvTimesR,0)%base 
             print('result',PIR_result,PIR_result.shape)
     
-    PIR_result = ''.join([chr(z) for z in PIR_result])
+    # Decode the sparse vector if needed
+    if hashFlag:
+        PIR_result = FiniteFieldCS.sparseDecode(PIR_result, searchIndex, bins, hashLength)
+    ResultFile = ''.join([chr(z) for z in PIR_result])
     
-    return PIR_result
+    return ResultFile
 
 
 if __name__=='__main__':	
@@ -192,30 +192,23 @@ if __name__=='__main__':
     base = int(sys.argv[4])	
     if len(sys.argv) >= 6: # if we're running the hashed version, there will be more arguments
         hashLength = 4
-        seed = int(sys.argv[5])
         hashFlag = 1
-        nBins = int(sys.argv[6])
-            
+        nBins = int(sys.argv[5])
+        print('nbins is',nBins)
+        
+        binSeed = 0
         binExpansion = 3
-        bins = [[] for i in range(nBins)]
-        for fileIdx in range(pow(queryDim,cubeDim)):
-            for c in range(binExpansion):
-                randBin = random.randint(0,nBins-1)
-                while fileIdx in bins[randBin]:
-                    randBin = random.randint(0,nBins-1)
-                bins[randBin].append(fileIdx)
+        mapping = FiniteFieldCS.buildRandMapping(binSeed,nBins,binExpansion,dbSize)
+        
+    # choose which file to query (can be random or deterministic)
     searchIndex = 0
     
-    # build the sampling matrix V
-    V = [[] for tmp in range(numServers)]
-    for x in range(1,numServers+1):
-        V[x-1] = [pow(x,l) for l in range(numServers-1,-1,-1)]
-    Vinv = utilities.invFiniteFieldMat(V,base)
+    # build the inverse sampling matrix V (inverse of Vandermonde matrix)
+    Vinv = FiniteFieldCS.buildInvSamplingMatrix(numServers,base) 
     
     t1 = time.time()
 
     # generate the PIR queries
-    # print('querydim is ',queryDim)
     pirQueries = generatePirQueries(searchIndex,dbSize,numServers,base)
     print('queries generated',pirQueries[:10])
 
@@ -228,12 +221,12 @@ if __name__=='__main__':
         
         else:
             fileSize = len(results[0])
-        PIR_result = decodeResults(results,fileSize,base,numServers,hashFlag,searchIndex,Vinv)
+        PIRresult = decodeResults(results,fileSize,base,numServers,hashFlag,searchIndex,Vinv)
+        
         # print ('pir result is ',PIR_result[0][:10])
-        print ('pir result is ',PIR_result)
+        print ('pir result is ',PIRresult)
 
-        # print '\n\nYour local result is: ',PIR_result
-
+        
         # measure the total time
         t2 = time.time()
         dt = t2-t1

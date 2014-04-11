@@ -5,14 +5,16 @@
 import socket
 import sys
 from _thread import *
-from serverClassRobust import RobustServer
+from databaseClassRobust import RobustDatabase
 import utilities,json,os,marshal
 import time
 from bitstring import BitArray
 import random
-import numpy
+import numpy as np
+import FiniteFieldCS
 
 hashFlag = 0
+backlog = 5
 
 if len(sys.argv) < 5:
     print( "Not enough input arguments: cubeDim,port,newDatabase")
@@ -24,12 +26,10 @@ newDatabase = int(sys.argv[2])
 dbFilename = sys.argv[3]
 base = int(sys.argv[4])
 
-if len(sys.argv) >= 7:
-    binSeed = int(sys.argv[6])
-    nBins = int(sys.argv[7])
+if len(sys.argv) >= 6:
+    binSeed = int(sys.argv[5])
+    nbins = int(sys.argv[6])
     hashFlag = 1  # the server should hash the results into bins
-    
-backlog = 5
 
 t = time.time()
 # Build the database
@@ -42,20 +42,31 @@ if newDatabase or not os.path.isfile(dbFilename+str(base)+'_db.npy'):
         exit()
     dbContent = f.readlines()
     f.close
-    serv = RobustServer(dbContent,base);
-    numpy.save(dbFilename+str(base)+'_db',serv.db)
+    serv = RobustDatabase(dbContent,base);
+    np.save(dbFilename+str(base)+'_db',serv.db)
     f = open(dbFilename+'_meta','wb')
     f.write(bytes(str(serv.dbSize)+'\n','utf-8'))
     f.write(bytes(str(serv.fileSize)+'\n','utf-8'))
     f.close()
     sys.exit()
 else:
-    db = numpy.load(dbFilename+str(base)+'_db.npy')
+    db = np.load(dbFilename+str(base)+'_db.npy')
     f = open(dbFilename+'_meta','r')
     f.readline()
     fileSize = int(f.readline())
     f.close()
-    serv = RobustServer(db,base,fileSize)
+    
+    # Generate a server 
+    if hashFlag:
+        # generate the mapping from database elements to bins (indexed by seed, so the 
+        #     client and server have the same mapping
+        binExpansion = 3
+        binSeed = 0
+        dbSize = utilities.file_len(dbFilename)
+        mapping = FiniteFieldCS.buildRandMapping(binSeed,nbins,binExpansion,dbSize)
+        serv = RobustDatabase(db,base,fileSize,mapping,nbins)
+    else:
+        serv = RobustDatabase(db,base,fileSize)
 # print 'Loading db', time.time()-t
 t = time.time()
  
@@ -96,31 +107,24 @@ if not hashFlag:
     result = serv.submitPirQuery(query,base).tolist()
     result = [int(a) for a in result]
 else:
-    # generate the mapping from database elements to bins
-    random.seed(binSeed)
-    print('cubesize is ',serv.cubeSize)
-    binExpansion = 3
-    bins = [[] for i in range(nBins)]
-    for fileIdx in range(serv.nBlocks):
-        for c in range(binExpansion):
-            randBin = random.randint(0,nBins-1)
-            while fileIdx in bins[randBin]:
-                randBin = random.randint(0,nBins-1)
-            bins[randBin].append(fileIdx)
     # print('bins is ',bins)
-    result = serv.submitPirQueryHash(query,base,bins)
+    result = serv.submitPirQueryHash(query,base,mapping,nbins)
     # print('result is ',result)
     # print('result dims',[len(item) for item in result])
 
 t = time.time()-t
 f.write(str(t)+'\n')
 f.close()
-
 # return the result to the client
 print ('size result',len(result),len(marshal.dumps([port]+result)), len(marshal.loads(marshal.dumps([port]+result))))
 # print('result is',result[0][:10])
 # client_socket.send(marshal.dumps([port]+result))
-utilities.send_msg(client_socket,marshal.dumps([port]+result))
+if hashFlag:
+    result = sum(result.tolist(),[])
+    msg = [port] + result
+    utilities.send_msg(client_socket,marshal.dumps(msg))
+else:
+    utilities.send_msg(client_socket,marshal.dumps([port]+result))
 
 t = time.time()
 client_socket.close()

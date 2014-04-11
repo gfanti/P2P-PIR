@@ -1,6 +1,6 @@
 # utilities
 import random 
-from server_class import *
+# from server_class import *
 from global_constants import *
 import numpy
 import webbrowser
@@ -13,12 +13,14 @@ def clearScreen():
 	os.system('cls')
 	
 def file_len(fname):
+    """ Returns the number of elements in file 'fname' """
     with open(fname) as f:
         for i, l in enumerate(f):
             pass
     return i + 1
 	
 def multGf(a,b,base):
+    """ Multiplies 'a' by 'b' in finite field base 'base'  """
     # a is an element of GF4
     # b is a byte, i.e. 4 elements of GF(4), each 2 bits long
 
@@ -63,9 +65,9 @@ def db2bitarray(dbContent,cubeSize,cubeDim,multFactor,base):
     return db
 		
 def scaleArrayGF(x,a,base):
-    """Multiply an array x by a constant a in base"""
+    """Multiply an array 'x' by a constant 'a' in base 'base' """
     # x is the array
-    # a is the GF(4) element to scale by
+    # a is the GF(q) element to scale by
     if a == 1:
         return x
     else:
@@ -81,12 +83,12 @@ def retrieve_webpage(url):
 	webbrowser.open(url)
 
 def send_msg(sock, msg):
-    # Prefix each message with a 4-byte length (network byte order)
+    """ Prefix each message with a 4-byte length (network byte order) """
     msg = struct.pack('>I', len(msg)) + msg
     sock.sendall(msg)
     
 def recv_msg(sock):
-    # Read message length and unpack it into an integer
+    """ Read message length and unpack it into an integer """
     raw_msglen = recvall(sock, 4)
     if not raw_msglen:
         return None
@@ -95,7 +97,7 @@ def recv_msg(sock):
     return recvall(sock, msglen)
 
 def recvall(sock, n):
-    # Helper function to recv n bytes or return None if EOF is hit
+    """ Helper function to recv n bytes or return None if EOF is hit """
     data = bytes('','utf-8')
     # data = ''
     while len(data) < n:
@@ -105,33 +107,10 @@ def recvall(sock, n):
         data += packet
     return data
     
-def isSingleton(file,hashLength):
-    # print(type(file),file[:hashLength],file[-hashLength:],HASH_LEN, len(file),file[:HASH_LEN])
-    fileString = bytes(''.join(chr(item) for item in file[:HASH_LEN]),'utf-8')
-    hashComputed = hashlib.md5(fileString).hexdigest()[:hashLength]
-    hashRead = ''.join(chr(item) for item in file[-hashLength-1:-1])
-    print ('hashes',hashComputed,hashRead,hashComputed==hashRead)
-    return hashComputed == hashRead
-    # return file[:hashLength] == file[-hashLength:]
-    
-def invFiniteFieldMat(V,base):
-    """Returns the inverse numServersxnumServers Vandermonde matrix in base base"""
-    Vinv = numpy.linalg.inv(V);
-    for i in range(Vinv.shape[0]):
-        for j in range(Vinv.shape[1]):
-            x = Vinv[i,j]
-            parts = [0,0]
-            parts = rationalize(x)
-            if x%1 > 0:
-                num = parts[0]
-                while x%1 > 0:
-                    num += base
-                    x = num / parts[1]
-            x = int(x % base)
-            Vinv[i,j] = x
-    return Vinv
-    
 def rationalize(x):
+    """ Takes a rational number in decimal representation 'x', and outputs 
+        a fraction representation of that number (outputs [numerator denominator]) """
+        
     parts = [0,0]
     st = str(x)
     if len(st) > 4:
@@ -158,3 +137,11 @@ def rationalize(x):
         parts = [frac.numerator, frac.denominator]
     
     return parts
+    
+def chunks(l, n):
+    """ Divide list l into chunks of size n"""
+    
+    if n<1:
+        n=1
+    return [l[i:i+n] for i in range(0, len(l), n)]
+    

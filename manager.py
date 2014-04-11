@@ -19,13 +19,13 @@ if __name__=='__main__':
 
     # set the relevant parameters
     BASE_PORT = 8888
-    numServers = 2
+    numServers = 3
     cubeDim = 1 #GET RID OF THE CUBE DIMENSION
     newDatabase = 0
     base = pow(2,16)+1
-    hashFlag = 0
+    hashFlag = 1
     seed = 0
-    nBins = 10
+    nBins = 3
     # dbFilenames = ['data/2048bytes/500files','data/2048bytes/2500files','data/2048bytes/5000files','data/2048bytes/7500files','data/2048bytes/10000files']
     dbFilenames = ['data_memory/4bytes/2files']
 
@@ -66,6 +66,8 @@ if __name__=='__main__':
                 # start each of the servers
                 children = []
                 port = []
+                
+                
                 for i in range(numServers):
                     port.append(BASE_PORT + i)
                     if hashFlag:
@@ -79,7 +81,7 @@ if __name__=='__main__':
                 t1 = time.time()
                 # call the client process
                 if hashFlag:
-                    cmd = ['clientManager.py',str(utilities.file_len(dbFilename)),str(numServers),str(BASE_PORT),str(base),str(seed),str(nBins)]
+                    cmd = ['clientManager.py',str(utilities.file_len(dbFilename)),str(numServers),str(BASE_PORT),str(base),str(nBins)]
                 else:
                     cmd = ['clientManager.py',str(utilities.file_len(dbFilename)),str(numServers),str(BASE_PORT),str(base)]            
                 children.append( subprocess.Popen( cmd, shell=True ) )
