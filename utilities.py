@@ -2,7 +2,7 @@
 import random 
 # from server_class import *
 from global_constants import *
-import numpy
+import numpy as np
 import webbrowser
 import os,marshal,copy
 import struct
@@ -49,19 +49,19 @@ def db2bitarray(dbContent,cubeSize,cubeDim,multFactor,base):
         # convert the DB into bitstrings
         for item in dbContent:
             item = item.ljust(num_file_bits)
-            db = db + [numpy.uint64(ord(y)) for y in item]
+            db = db + [np.uint64(ord(y)) for y in item]
             # db = db + [ord(' ') for y in range(num_file_bits-len(item))]
         # fill in the last slots of the database with all spaces
         for item in range(int(pow(cubeSize,cubeDim) - len(dbContent))):
-            db = db + [numpy.uint64(ord(' '))]*num_file_bits
+            db = db + [np.uint64(ord(' '))]*num_file_bits
     else:
         for item in dbContent:
             item = item.ljust(num_file_bits)
-            db = db + [numpy.uint64(multGf(multFactor,int(ord(y)),base)) for y in item]
+            db = db + [np.uint64(multGf(multFactor,int(ord(y)),base)) for y in item]
             # db = db + [multGf4(multFactor,int(ord(' '))) for y in range(num_file_bits-len(item))]
         # fill in the last slots of the database with all spaces
         for item in range(int(pow(cubeSize,cubeDim) - len(dbContent))):
-            db = db + [numpy.uint64(multGf(multFactor,int(ord(' ')),base))]*num_file_bits
+            db = db + [np.uint64(multGf(multFactor,int(ord(' ')),base))]*num_file_bits
     return db
 		
 def scaleArrayGF(x,a,base):
@@ -76,7 +76,7 @@ def scaleArrayGF(x,a,base):
         b = x[:].reshape(-1,1)
         # print 'b is ',b, 'a is',a
         
-        xnew = numpy.array([multGf(a,item,base) for item in b]).reshape(arrayShape)
+        xnew = np.array([multGf(a,item,base) for item in b]).reshape(arrayShape)
         return xnew
 
 def retrieve_webpage(url):

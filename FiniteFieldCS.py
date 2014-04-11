@@ -1,6 +1,8 @@
 # FiniteFieldCS.py: helper functions for distributed compressed sensing over finite fields
 
 import utilities
+import random
+import numpy as np
 
 def sparseDecode(PIR_result, searchIndex, bins, hashLength):
     """ Converts a compressed sensing vector (PIR_result) into a sparse vector, and 
@@ -37,12 +39,12 @@ def isSingleton(file,hashLength):
 def invFiniteFieldMat(V,base):
     """Inverts a (numServers)x(numServers) Vandermonde matrix V in base 'base' """
     
-    Vinv = numpy.linalg.inv(V);
+    Vinv = np.linalg.inv(V);
     for i in range(Vinv.shape[0]):
         for j in range(Vinv.shape[1]):
             x = Vinv[i,j]
             parts = [0,0]
-            parts = rationalize(x)
+            parts = utilities.rationalize(x)
             if x%1 > 0:
                 num = parts[0]
                 while x%1 > 0:
