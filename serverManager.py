@@ -5,7 +5,7 @@
 import socket
 import sys
 from _thread import *
-from databaseClassRobust import RobustDatabase
+from RobustDatabase import RobustDatabase
 import utilities,json,os,marshal
 import time
 from bitstring import BitArray
