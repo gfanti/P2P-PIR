@@ -28,7 +28,7 @@ base = int(sys.argv[4])
 
 if len(sys.argv) >= 6:
     binSeed = int(sys.argv[5])
-    nbins = int(sys.argv[6])
+    nBins = int(sys.argv[6])
     hashFlag = 1  # the server should hash the results into bins
 
 t = time.time()
@@ -60,11 +60,13 @@ else:
     if hashFlag:
         # generate the mapping from database elements to bins (indexed by seed, so the 
         #     client and server have the same mapping
-        binExpansion = 3
+        binExpansion = 2
         binSeed = 0
+        redundancyFactor = 3
         dbSize = utilities.file_len(dbFilename)
-        mapping = FiniteFieldCS.buildRandMapping(binSeed,nbins,binExpansion,dbSize)
-        serv = RobustDatabase(db,base,fileSize,mapping,nbins)
+        mapping = FiniteFieldCS.buildRandMapping(binSeed,nBins,binExpansion,dbSize)
+        redundancy = FiniteFieldCS.buildDetMapping(redundancyFactor,dbSize,base)
+        serv = RobustDatabase(db,base,fileSize,mapping,redundancy,nBins)
     else:
         serv = RobustDatabase(db,base,fileSize)
 # print 'Loading db', time.time()-t
@@ -108,7 +110,7 @@ if not hashFlag:
     result = [int(a) for a in result]
 else:
     # print('bins is ',bins)
-    result = serv.submitPirQueryHash(query,base,mapping,nbins)
+    result = serv.submitPirQueryHash(query,base)
     # print('result is ',result)
     # print('result dims',[len(item) for item in result])
 
@@ -116,7 +118,7 @@ t = time.time()-t
 f.write(str(t)+'\n')
 f.close()
 # return the result to the client
-print ('size result',len(result),len(marshal.dumps([port]+result)), len(marshal.loads(marshal.dumps([port]+result))))
+# print ('size result',len(result),len(marshal.dumps([port]+result)), len(marshal.loads(marshal.dumps([port]+result))))
 # print('result is',result[0][:10])
 # client_socket.send(marshal.dumps([port]+result))
 if hashFlag:

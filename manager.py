@@ -19,12 +19,14 @@ if __name__=='__main__':
 
     # set the relevant parameters
     BASE_PORT = 8888
-    numServers = 3
+    numServers = 4
     cubeDim = 1 #GET RID OF THE CUBE DIMENSION
     newDatabase = 0
     base = pow(2,16)+1
     hashFlag = 1
-    seed = 0
+    seed = 0 # seed for random mapping 
+    binExpansion = 2 # How many bins to map each database element to
+    redundancyFactor = 3 # how many rows of Vandermonde matrix to use in compressed sensing
     nBins = 3
     # dbFilenames = ['data/2048bytes/500files','data/2048bytes/2500files','data/2048bytes/5000files','data/2048bytes/7500files','data/2048bytes/10000files']
     dbFilenames = ['data_memory/4bytes/2files']
@@ -81,7 +83,8 @@ if __name__=='__main__':
                 t1 = time.time()
                 # call the client process
                 if hashFlag:
-                    cmd = ['clientManager.py',str(utilities.file_len(dbFilename)),str(numServers),str(BASE_PORT),str(base),str(nBins)]
+                    cmd = ['clientManager.py',str(utilities.file_len(dbFilename)),str(numServers),str(BASE_PORT),str(base),str(nBins), \
+                            str(seed), str(binExpansion), str(redundancyFactor)]
                 else:
                     cmd = ['clientManager.py',str(utilities.file_len(dbFilename)),str(numServers),str(BASE_PORT),str(base)]            
                 children.append( subprocess.Popen( cmd, shell=True ) )
